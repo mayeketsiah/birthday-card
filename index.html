@@ -231,9 +231,11 @@ html, body {
   border-radius: 3px;
   box-shadow: 0 12px 45px rgba(0,0,0,.5);
   display: flex; flex-direction: column;
-  align-items: center; justify-content: flex-start;
+  align-items: stretch;
+  justify-content: flex-start;
   padding: 20px 14px 14px;
   overflow: hidden;
+  min-height: 0;
 }
 .page-right::before {
   content: ''; position: absolute; inset: 7px;
@@ -250,15 +252,19 @@ html, body {
 
 .msg-scroll {
  overflow-y: auto;
+  overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  width: 100%; height: 100%;
+  width: 100%;
+  flex: 1;
+  min-height: 0;
   scrollbar-width: none;
   display: flex; flex-direction: column;
   align-items: center; gap: 9px;
-  padding: 2px 3px 20px 3px; /* extra bottom padding so last word isn't clipped */
+  padding: 2px 8px 40px 8px;
   z-index: 1;
-  touch-action: pan-y; /* tells mobile: this element scrolls vertically */
+  touch-action: pan-y;
   overscroll-behavior: contain;
+  position: relative;
 }
 .msg-scroll::-webkit-scrollbar { display: none; }
 
@@ -624,7 +630,7 @@ html, body {
           </div>
           <div class="divider" style="width:55px"></div>
           <div class="back-sub">always & forever yours</div>
-          <!-- ✏️ YOUR NAME -->Ketsiah💌</div>
+          <div class="back-from">Ketsiah💌</div>
         </div>
 
       </div><!-- /card-3d -->
@@ -705,6 +711,7 @@ function openEnvelope() {
   if (state !== 0) return;
 
   // Auto-play music on first gesture
+
  setTimeout(() => {
   bgMusic.play()
     .then(() => { musicOn = true; musicBtn.classList.remove('off'); })
@@ -775,14 +782,21 @@ function goTo(n) {
 }
 
 /* ── SWIPE SUPPORT ──────────────────────────────────── */
-let swipeX = 0;
+let swipeX = 0, swipeY = 0, swipeOnScroll = false;
+
 document.addEventListener('touchstart', e => {
   swipeX = e.changedTouches[0].clientX;
+  swipeY = e.changedTouches[0].clientY;
+  // Check if touch started inside the scrollable message area
+  swipeOnScroll = !!e.target.closest('.msg-scroll');
 }, { passive: true });
+
 document.addEventListener('touchend', e => {
-  if (state === 0) return;
+  if (state === 0 || swipeOnScroll) return; // don't swipe-navigate if scrolling
   const dx = e.changedTouches[0].clientX - swipeX;
-  if (Math.abs(dx) > 38) {
+  const dy = e.changedTouches[0].clientY - swipeY;
+  // Only trigger if horizontal swipe dominates vertical
+  if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 1.5) {
     dx < 0 ? navNext() : navBack();
   }
 }, { passive: true });
