@@ -206,10 +206,15 @@ html, body {
   width: 100%; height: 100%;
   position: relative;
   transform-style: preserve-3d;
+  -webkit-transform-style: preserve-3d;
   transition: transform .9s cubic-bezier(.4,0,.2,1);
+  -webkit-transition: -webkit-transform .9s cubic-bezier(.4,0,.2,1);
+  will-change: transform;
 }
-/* When entire card flips to show back */
-.card-3d.show-back { transform: rotateY(180deg); }
+.card-3d.show-back {
+  transform: rotateY(180deg);
+  -webkit-transform: rotateY(180deg);
+}
 
 /* ── FACE A (front + inside — bottom face) ── */
 .face-a {
@@ -244,11 +249,16 @@ html, body {
 }
 
 .msg-scroll {
-  overflow-y: auto; width: 100%; height: 100%;
+ overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  width: 100%; height: 100%;
   scrollbar-width: none;
   display: flex; flex-direction: column;
   align-items: center; gap: 9px;
-  padding: 2px 3px; z-index: 1;
+  padding: 2px 3px 20px 3px; /* extra bottom padding so last word isn't clipped */
+  z-index: 1;
+  touch-action: pan-y; /* tells mobile: this element scrolls vertically */
+  overscroll-behavior: contain;
 }
 .msg-scroll::-webkit-scrollbar { display: none; }
 
@@ -323,10 +333,16 @@ html, body {
   position: absolute; inset: 0;
   transform-origin: left center;
   transform-style: preserve-3d;
+  -webkit-transform-style: preserve-3d;
   transition: transform .88s cubic-bezier(.4,0,.2,1);
+  -webkit-transition: -webkit-transform .88s cubic-bezier(.4,0,.2,1);
+  will-change: transform;
   z-index: 3;
 }
-.panel-left.flipped { transform: rotateY(-180deg); }
+.panel-left.flipped {
+  transform: rotateY(-180deg);
+  -webkit-transform: rotateY(-180deg);
+}
 
 .pl-front, .pl-back {
   position: absolute; inset: 0;
@@ -375,13 +391,19 @@ html, body {
 
 /* ── Cover panel — flips to reveal left page ── */
 .panel-cover {
-  position: absolute; inset: 0;
+   position: absolute; inset: 0;
   transform-origin: left center;
   transform-style: preserve-3d;
+  -webkit-transform-style: preserve-3d;
   transition: transform .88s cubic-bezier(.4,0,.2,1);
+  -webkit-transition: -webkit-transform .88s cubic-bezier(.4,0,.2,1);
+  will-change: transform;
   z-index: 5;
 }
-.panel-cover.flipped { transform: rotateY(-180deg); }
+.panel-cover.flipped {
+  transform: rotateY(-180deg);
+  -webkit-transform: rotateY(-180deg);
+}
 
 .pc-front, .pc-back {
   position: absolute; inset: 0;
@@ -481,8 +503,8 @@ html, body {
 <body>
 
 <!-- ── Audio ── -->
-<audio id="bgMusic" loop preload="auto"><source src="music.mp4" type="audio/mpeg"></audio>
-<audio id="voiceAudio" preload="auto"><source src="voicenote.mp4" type="audio/mpeg"></audio>
+<audio id="bgMusic" loop preload="auto" playsinline webkit-playsinline><source src="music.mp4" type="audio/mpeg"></audio>
+<audio id="voiceAudio" preload="auto" playsinline webkit-playsinline><source src="voicenote.mp4" type="audio/mpeg"></audio>
 
 <div class="bg"></div>
 <div class="particles" id="particles"></div>
@@ -683,10 +705,11 @@ function openEnvelope() {
   if (state !== 0) return;
 
   // Auto-play music on first gesture
+ setTimeout(() => {
   bgMusic.play()
     .then(() => { musicOn = true; musicBtn.classList.remove('off'); })
     .catch(() => {});
-
+}, 300); // small delay lets iOS finish the gesture context
   // Animate flap
   envelope.classList.add('opened');
   envelope.onclick = null; // disable further envelope taps
@@ -840,6 +863,29 @@ function spawnSparkles() {
     setTimeout(() => d.remove(), 2200);
   }
 }
+
+/* ── iOS AUDIO UNLOCK ─────────────────────────────── */
+// iOS Safari requires audio to be triggered inside a user gesture.
+// This silently unlocks the audio context on the very first tap.
+let audioUnlocked = false;
+function unlockAudio() {
+  if (audioUnlocked) return;
+  audioUnlocked = true;
+  // Create a silent buffer and play it to unlock AudioContext
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  const buf = ctx.createBuffer(1, 1, 22050);
+  const src = ctx.createBufferSource();
+  src.buffer = buf;
+  src.connect(ctx.destination);
+  src.start(0);
+  // Also attempt to load/play then immediately pause bgMusic
+  bgMusic.load();
+  bgMusic.play().then(() => bgMusic.pause()).catch(() => {});
+  voiceAudio.load();
+}
+document.addEventListener('touchstart', unlockAudio, { once: true });
+document.addEventListener('touchend',   unlockAudio, { once: true });
+
 </script>
 </body>
 </html>
